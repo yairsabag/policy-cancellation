@@ -1,0 +1,16 @@
+{
+  "_comment": "Ticketing credit pattern: postponement offers a credit worth 120% of the ticket value instead of cash.",
+  "policies": [
+    {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": { "plain": "If the event is postponed, receive a credit worth 120% of your ticket, valid for future events at this venue." },
+      "applies_to": ["$.line_items[0]"],
+      "anchor": "2026-10-01T20:00:00Z",
+      "rules": {
+        "seller_postpone": { "kind": "percentage", "buyer_bps": 10000 },
+        "seller_cancel":   { "kind": "percentage", "buyer_bps": 10000 }
+      },
+      "payout": { "method": "credit", "multiplier_bps": 12000 }
+    }
+  ]
+}

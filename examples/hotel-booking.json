@@ -1,16 +1,20 @@
 {
-  "_comment": "Hotel booking: free cancellation until 14 days before check-in, 50% until 48h, non-refundable after.",
+  "_comment": "Hotel: free until 48h before check-in; late cancel and no-show charged one night (the industry-standard unit penalty).",
   "policies": [
     {
       "type": "io.github.yairsabag.policy.cancellation",
-      "description": { "plain": "Free cancellation until Nov 1; 50% refund until Nov 13; non-refundable after." },
+      "description": { "plain": "Free cancellation until 48 hours before check-in. Later cancellations and no-shows are charged the first night." },
       "applies_to": ["$.line_items[0]"],
       "anchor": "2026-11-15T15:00:00+02:00",
-      "tiers": [
-        { "until": "P14D", "buyer_bps": 10000 },
-        { "until": "PT48H", "buyer_bps": 5000 }
-      ],
-      "after_last_tier_bps": 0
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            { "until": "PT48H", "outcome": { "kind": "percentage", "buyer_bps": 10000 } }
+          ],
+          "after_last_tier": { "kind": "unit_deduction", "seller_keeps": { "quantity": 1, "unit": "night" } }
+        },
+        "no_show": { "kind": "unit_deduction", "seller_keeps": { "quantity": 1, "unit": "night" } }
+      }
     }
   ]
 }

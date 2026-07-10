@@ -2,46 +2,127 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/yairsabag/policy-cancellation/schema/policy.cancellation.schema.json",
   "title": "io.github.yairsabag.policy.cancellation",
-  "description": "Time-tiered, anchor-relative cancellation policy for UCP policies[]. Body shape per the composition pattern discussed in Universal-Commerce-Protocol/ucp#572.",
+  "description": "Time-tiered, anchor-relative cancellation and disruption policy for UCP policies[]. v0.2: trigger rules, discriminated outcome union, dual-reference conditions. Design rationale in docs/DESIGN-v0.2.md.",
   "type": "object",
-  "required": ["anchor", "tiers"],
+  "required": ["anchor", "rules"],
+  "additionalProperties": false,
   "properties": {
     "anchor": {
       "type": "string",
       "format": "date-time",
-      "description": "The reference moment the policy is anchored to (check-in, event start, delivery date). Tier deadlines count backwards from this moment."
+      "description": "The reference moment (check-in, event start, service time). Anchor-relative deadlines count backwards from this moment."
     },
-    "tiers": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 8,
-      "description": "Ordered from farthest to nearest to the anchor. Semantic constraints (not expressible in JSON Schema): 'until' durations MUST be strictly decreasing in proximity order (each tier closer to the anchor than the previous), and 'buyer_bps' MUST be strictly decreasing (a later deadline never refunds more).",
-      "items": {
-        "type": "object",
-        "required": ["until", "buyer_bps"],
-        "additionalProperties": false,
-        "properties": {
-          "until": {
-            "type": "string",
-            "pattern": "^P(?!$)(\\d+D)?(T(\\d+H)?(\\d+M)?(\\d+S)?)?$",
-            "description": "ISO 8601 duration BEFORE the anchor until which this tier applies (e.g. 'P7D' = up to 7 days before anchor)."
-          },
-          "buyer_bps": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000,
-            "description": "Basis points of the amount returned to the buyer on self-cancellation within this tier (10000 = 100%)."
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Outcomes keyed by trigger. buyer_cancel is a schedule; the others are single outcomes. Absent no_show defaults to buyer_cancel's after_last_tier outcome. Absent seller_cancel defaults to full refund.",
+      "properties": {
+        "buyer_cancel": {
+          "type": "object",
+          "required": ["tiers"],
+          "additionalProperties": false,
+          "properties": {
+            "tiers": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "description": "Ordered farthest-to-nearest to the reference point. Semantic constraints (not expressible in JSON Schema): deadlines strictly decreasing in proximity; buyer entitlement non-increasing over time.",
+              "items": { "$ref": "#/$defs/tier" }
+            },
+            "after_last_tier": {
+              "$ref": "#/$defs/outcome",
+              "description": "Outcome once the last deadline passes. Default: percentage with buyer_bps 0."
+            }
           }
-        }
+        },
+        "no_show": { "$ref": "#/$defs/outcome" },
+        "seller_cancel": { "$ref": "#/$defs/outcome" },
+        "seller_postpone": { "$ref": "#/$defs/outcome" }
       }
     },
-    "after_last_tier_bps": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 10000,
-      "default": 0,
-      "description": "Buyer entitlement after the last tier's deadline has passed (typically 0)."
+    "payout": {
+      "type": "object",
+      "required": ["method"],
+      "additionalProperties": false,
+      "description": "Optional. How buyer value is delivered. Absent = original payment rails at 1.0x.",
+      "properties": {
+        "method": { "type": "string", "enum": ["original", "credit"] },
+        "multiplier_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Value multiplier in basis points (12000 = credit worth 120% of the refund amount). Default 10000."
+        }
+      }
     }
   },
-  "additionalProperties": false
+  "$defs": {
+    "tier": {
+      "type": "object",
+      "required": ["until", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "until": {
+          "type": "string",
+          "pattern": "^P(?!$)(\\d+D)?(T(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+          "description": "ISO 8601 duration. Calendar-based; business-day counting is not supported (documented limitation)."
+        },
+        "relative_to": {
+          "type": "string",
+          "enum": ["anchor", "purchase"],
+          "default": "anchor",
+          "description": "anchor: duration BEFORE the anchor until which this tier applies. purchase: duration AFTER purchase during which this tier applies (cooling-off windows)."
+        },
+        "outcome": { "$ref": "#/$defs/outcome" }
+      }
+    },
+    "outcome": {
+      "description": "Discriminated union. Direction is baked into each kind's field name (invalid states unrepresentable): percentage is buyer-side; fixed_fee and unit_deduction are seller-side, matching how each kind is stated in real policies.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "buyer_bps"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "percentage" },
+            "buyer_bps": { "type": "integer", "minimum": 0, "maximum": 10000 }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "seller_keeps"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "fixed_fee" },
+            "seller_keeps": {
+              "type": "object",
+              "required": ["amount", "currency"],
+              "additionalProperties": false,
+              "properties": {
+                "amount": { "type": "string", "pattern": "^\\d+(\\.\\d{1,2})?$" },
+                "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "seller_keeps"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "unit_deduction" },
+            "seller_keeps": {
+              "type": "object",
+              "required": ["quantity", "unit"],
+              "additionalProperties": false,
+              "properties": {
+                "quantity": { "type": "integer", "minimum": 1 },
+                "unit": { "type": "string", "description": "Free-form in v0.2 (e.g. 'night', 'session'). Registry is backlog." }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
 }

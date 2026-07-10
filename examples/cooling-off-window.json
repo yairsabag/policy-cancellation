@@ -1,0 +1,20 @@
+{
+  "_comment": "Purchase-relative cooling-off window alongside anchor-relative tiers (pattern required by e.g. Israeli consumer law: cancel within 14 days of purchase if >7 days remain before the service). Statutory 'lesser of 5% or fixed fee' composite is NOT expressible in v0.2 — documented backlog (see docs/DESIGN-v0.2.md).",
+  "policies": [
+    {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": { "plain": "Full refund within 14 days of booking. After that: 50% until 7 days before the stay, none later." },
+      "applies_to": ["$.line_items[0]"],
+      "anchor": "2026-12-24T15:00:00+02:00",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            { "until": "P14D", "relative_to": "purchase", "outcome": { "kind": "percentage", "buyer_bps": 10000 } },
+            { "until": "P7D",  "relative_to": "anchor",   "outcome": { "kind": "percentage", "buyer_bps": 5000 } }
+          ],
+          "after_last_tier": { "kind": "percentage", "buyer_bps": 0 }
+        }
+      }
+    }
+  ]
+}

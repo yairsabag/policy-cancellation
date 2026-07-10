@@ -1,49 +1,60 @@
 # policy.cancellation — a UCP policy extension
 
-**Status:** prototype / validation phase · **Namespace:** `io.github.yairsabag.policy.cancellation` (will change if standardized as a shared extension)
+**Status:** v0.2 — corpus-validated design · **Namespace:** `io.github.yairsabag.policy.cancellation` (will change if standardized as a shared extension)
 
-A machine-readable, **time-tiered, anchor-relative cancellation policy** for [UCP](https://github.com/Universal-Commerce-Protocol/ucp)'s `policies[]` container — for the class of merchant policies standard in services and bookings commerce:
+A machine-readable **cancellation and disruption policy** for [UCP](https://github.com/Universal-Commerce-Protocol/ucp)'s `policies[]` container — covering the class of merchant policies standard in services and bookings commerce:
 
-> *Free cancellation until 7 days before the event; 70% back until 72 hours; 30% until 24 hours; nothing after.*
+> *Free cancellation until 7 days before the event; 70% back until 72 hours; 30% until 24 hours; nothing after. No-shows charged the first night. Full refund if the seller cancels.*
 
 ## Why
 
-Cancellation terms influence purchasing decisions before payment, yet today they are typically published only as human-readable text. Purchasing agents can compare price and shipping but cannot weigh that one hotel offer is fully refundable until check-in and another is not. The base `refund` policy sketch (single `window`) covers goods-style returns; this extension covers the services side: entitlements that **step down at deadlines**, measured **backwards from an anchor** (check-in, event start), with **partial** outcomes.
+Cancellation terms influence purchasing decisions before payment, yet today they are typically published only as human-readable text. Purchasing agents can compare price and shipping but cannot weigh that one hotel offer is fully refundable until check-in and another is not.
 
-Origin: the design discussion in [Universal-Commerce-Protocol/ucp#572](https://github.com/Universal-Commerce-Protocol/ucp/pull/572), where the composition pattern used here was sketched by the UCP maintainers. Related: Return Extension ([#257](https://github.com/Universal-Commerce-Protocol/ucp/pull/257)) for physical goods; Services Vertical ([#303](https://github.com/Universal-Commerce-Protocol/ucp/issues/303)).
+Origin: the design discussion in [Universal-Commerce-Protocol/ucp#572](https://github.com/Universal-Commerce-Protocol/ucp/pull/572). Related: Return Extension ([#257](https://github.com/Universal-Commerce-Protocol/ucp/pull/257)) for physical goods; Services Vertical ([#303](https://github.com/Universal-Commerce-Protocol/ucp/issues/303)).
+
+## What changed in v0.2
+
+v0.1 was validated against **~40 real cancellation policies** across hospitality, event ticketing, appointments/services, and Israeli consumer-law sources ([docs/TAXONOMY.md](docs/TAXONOMY.md)). The anchor+tiers core held; the corpus exposed two recurring generalizations, now in the design ([docs/DESIGN-v0.2.md](docs/DESIGN-v0.2.md)):
+
+1. **Outcomes are not always percentages.** Flat fees ($50 late-cancel) and unit deductions (one night, one session) are equally standard → a small discriminated `outcome` union: `percentage` | `fixed_fee` | `unit_deduction`.
+2. **More triggers than buyer cancellation.** No-show, seller cancellation and postponement carry distinct outcomes in every domain → `rules` keyed by trigger.
+
+Fit-check: ~93% of the fully deterministic corpus is expressible in v0.2. Known gaps are documented backlog, not surprises.
 
 ## Shape
-
-On the wire, it is just another entry in `policies[]` — riding `applies_to` targeting, `messages[]` disclosure and the `links[]` fallback, with no new machinery:
 
 ```json
 {
   "type": "io.github.yairsabag.policy.cancellation",
-  "description": { "plain": "Free cancellation until Aug 13; 70% back until Aug 17; 30% until Aug 19; none after." },
+  "description": { "plain": "Free cancellation until 48h before check-in. Later cancellations and no-shows charged the first night." },
   "applies_to": ["$.line_items[0]"],
-  "anchor": "2026-08-20T15:00:00Z",
-  "tiers": [
-    { "until": "P7D",   "buyer_bps": 10000 },
-    { "until": "PT72H", "buyer_bps": 7000 },
-    { "until": "PT24H", "buyer_bps": 3000 }
-  ],
-  "after_last_tier_bps": 0
+  "anchor": "2026-11-15T15:00:00+02:00",
+  "rules": {
+    "buyer_cancel": {
+      "tiers": [
+        { "until": "PT48H", "outcome": { "kind": "percentage", "buyer_bps": 10000 } }
+      ],
+      "after_last_tier": { "kind": "unit_deduction", "seller_keeps": { "quantity": 1, "unit": "night" } }
+    },
+    "no_show": { "kind": "unit_deduction", "seller_keeps": { "quantity": 1, "unit": "night" } },
+    "seller_cancel": { "kind": "percentage", "buyer_bps": 10000 }
+  }
 }
 ```
 
-Semantics:
+Key semantics:
 
-- **`anchor`** — the reference moment (check-in, event start). Intrinsic to the policy; the entry is self-contained.
-- **`tiers[]`** — `until` is an ISO 8601 duration *before* the anchor. Tiers are ordered farthest → nearest; `until` strictly decreasing in proximity, `buyer_bps` strictly decreasing (a later deadline never refunds more).
-- **`after_last_tier_bps`** — buyer entitlement once the last deadline passes (default 0).
-- Everything not returned to the buyer belongs to the seller.
-- Platforms that negotiated the extension validate and reason over `tiers`; platforms that didn't can still render `description`.
+- **`anchor`** — the reference moment (check-in, event start). Tier deadlines default to counting backwards from it; `relative_to: "purchase"` supports cooling-off windows counted from booking time.
+- **`rules`** — keyed by trigger: `buyer_cancel` (a tier schedule), `no_show`, `seller_cancel`, `seller_postpone` (single outcomes). Absent `no_show` follows `buyer_cancel`'s after-last-tier outcome; absent `seller_cancel` means full refund.
+- **`outcome`** — direction is baked into each kind's field name: `percentage` is buyer-side (`buyer_bps`), `fixed_fee`/`unit_deduction` are seller-side (`seller_keeps`), matching how each is stated in real policies and making contradictory states unrepresentable.
+- **`payout`** *(optional)* — how value is delivered: original rails (default) or `credit` with a `multiplier_bps` ("credit worth 120%").
+- Platforms that negotiated the extension reason over `rules`; others can still render `description`.
 
-Schema: [`schema/policy.cancellation.schema.json`](schema/policy.cancellation.schema.json) · Examples: [`examples/`](examples/) (event ticket, hotel booking, venue deposit).
+Schema: [`schema/policy.cancellation.schema.json`](schema/policy.cancellation.schema.json) — all five [`examples/`](examples/) validate against it (event tiers, hotel one-night penalty, salon flat fee, cooling-off window, credit payout).
 
-## Status & roadmap
+## Deliberately out of scope (documented backlog)
 
-This is a prototype being validated against real services/bookings scenarios. Deliberately out of scope for now: partial consumption (introduces domain-specific settlement semantics), seller-initiated cancellation outcomes, dispute/arbiter pointers, and any execution/verification binding. If the shape proves broadly shared in practice, the goal is to bring implementation experience back to the UCP community to inform a possible shared extension.
+Composite outcomes (e.g. the Israeli statutory "lesser of 5% or ₪100"), refund-base fee carve-outs, `reschedule` trigger, business-day calendars, partial consumption, discretionary/history-dependent zones (~30% of real policies contain such zones — a machine-readability boundary, measured in the corpus), and any execution/verification binding.
 
 Feedback and real-world policy examples that this shape *cannot* express are especially welcome — please open an issue.
 

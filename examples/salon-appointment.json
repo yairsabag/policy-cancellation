@@ -1,0 +1,20 @@
+{
+  "_comment": "Salon: free until 24h before; $50 flat fee for late cancellation; no-show charged in full.",
+  "policies": [
+    {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": { "plain": "Free cancellation until 24 hours before your appointment. Late cancellations incur a $50 fee. No-shows are charged the full service price." },
+      "applies_to": ["$.line_items[0]"],
+      "anchor": "2026-09-03T10:00:00-05:00",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            { "until": "PT24H", "outcome": { "kind": "percentage", "buyer_bps": 10000 } }
+          ],
+          "after_last_tier": { "kind": "fixed_fee", "seller_keeps": { "amount": "50.00", "currency": "USD" } }
+        },
+        "no_show": { "kind": "percentage", "buyer_bps": 0 }
+      }
+    }
+  ]
+}
