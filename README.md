@@ -1,4 +1,5 @@
 # policy.cancellation — a UCP policy extension
+**[Live demo →](https://yairsabag.github.io/policy-cancellation/demo/)** — why a machine-readable policy changes which offer is cheaper.
 
 **Status:** v0.2 — corpus-validated design · **Namespace:** `io.github.yairsabag.policy.cancellation` (will change if standardized as a shared extension)
 
@@ -62,4 +63,4 @@ Feedback and real-world policy examples that this shape *cannot* express are esp
 
 Apache 2.0
 
-**[Live demo →](https://yairsabag.github.io/policy-cancellation/demo/)** — why a machine-readable policy changes which offer is cheaper.
+
