@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yairsabag/policy-cancellation/schema/policy.cancellation.schema.json",
+  "title": "io.github.yairsabag.policy.cancellation",
+  "description": "Time-tiered, anchor-relative cancellation policy for UCP policies[]. Body shape per the composition pattern discussed in Universal-Commerce-Protocol/ucp#572.",
+  "type": "object",
+  "required": ["anchor", "tiers"],
+  "properties": {
+    "anchor": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The reference moment the policy is anchored to (check-in, event start, delivery date). Tier deadlines count backwards from this moment."
+    },
+    "tiers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "description": "Ordered from farthest to nearest to the anchor. Semantic constraints (not expressible in JSON Schema): 'until' durations MUST be strictly decreasing in proximity order (each tier closer to the anchor than the previous), and 'buyer_bps' MUST be strictly decreasing (a later deadline never refunds more).",
+      "items": {
+        "type": "object",
+        "required": ["until", "buyer_bps"],
+        "additionalProperties": false,
+        "properties": {
+          "until": {
+            "type": "string",
+            "pattern": "^P(?!$)(\\d+D)?(T(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+            "description": "ISO 8601 duration BEFORE the anchor until which this tier applies (e.g. 'P7D' = up to 7 days before anchor)."
+          },
+          "buyer_bps": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000,
+            "description": "Basis points of the amount returned to the buyer on self-cancellation within this tier (10000 = 100%)."
+          }
+        }
+      }
+    },
+    "after_last_tier_bps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "default": 0,
+      "description": "Buyer entitlement after the last tier's deadline has passed (typically 0)."
+    }
+  },
+  "additionalProperties": false
+}

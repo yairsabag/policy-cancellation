@@ -1,0 +1,17 @@
+{
+  "_comment": "Event ticket: 100% refund until 7 days before, 70% until 72h, 30% until 24h, 0% after.",
+  "policies": [
+    {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": { "plain": "Free cancellation until Aug 13; 70% back until Aug 17; 30% until Aug 19; none after." },
+      "applies_to": ["$.line_items[0]"],
+      "anchor": "2026-08-20T21:00:00+03:00",
+      "tiers": [
+        { "until": "P7D",   "buyer_bps": 10000 },
+        { "until": "PT72H", "buyer_bps": 7000 },
+        { "until": "PT24H", "buyer_bps": 3000 }
+      ],
+      "after_last_tier_bps": 0
+    }
+  ]
+}
