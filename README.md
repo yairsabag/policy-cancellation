@@ -22,6 +22,8 @@ v0.1 was validated against **~40 real cancellation policies** across hospitality
 
 Fit-check: ~93% of the fully deterministic corpus is expressible in v0.2. Known gaps are documented backlog, not surprises.
 
+See [docs/methodology.md](docs/methodology.md) for how the corpus was built and how the coverage figure is computed.
+
 ## Shape
 
 ```json
