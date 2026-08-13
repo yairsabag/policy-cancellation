@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: "policy.cancellation — UCP extension for service-side cancellation policies"
+version: 0.2
+date-released: 2026-07-10
+authors:
+  - family-names: Sabag
+    given-names: Yair
+repository-code: https://github.com/yairsabag/policy-cancellation
+license: Apache-2.0
