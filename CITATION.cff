@@ -1,9 +1,19 @@
 cff-version: 1.2.0
+message: "If you use this schema or its corpus methodology, please cite this repository."
 title: "policy.cancellation — UCP extension for service-side cancellation policies"
-version: 0.2
-date-released: 2026-07-10
+version: "0.2.1"
+date-released: "2026-08-26"
 authors:
-  - family-names: Sabag
-    given-names: Yair
-repository-code: https://github.com/yairsabag/policy-cancellation
-license: Apache-2.0
+  - family-names: "Sabag"
+    given-names: "Yair"
+abstract: "A corpus-validated, machine-readable cancellation and disruption policy extension for UCP policies[], covering anchor-relative tiers, multiple triggers, and percentage, fixed-fee, and unit-deduction outcomes."
+keywords:
+  - "Universal Commerce Protocol"
+  - "UCP"
+  - "cancellation policy"
+  - "JSON Schema"
+  - "travel"
+  - "services commerce"
+repository-code: "https://github.com/yairsabag/policy-cancellation"
+url: "https://yairsabag.github.io/policy-cancellation/demo/"
+license: "Apache-2.0"
