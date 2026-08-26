@@ -1,7 +1,12 @@
 # policy.cancellation — a UCP policy extension
+
+[![UCP v2026-08-25](https://img.shields.io/badge/UCP-v2026--08--25-1f6feb)](https://github.com/Universal-Commerce-Protocol/ucp/releases/tag/v2026-08-25)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 **[Live demo →](https://yairsabag.github.io/policy-cancellation/demo/)** — why a machine-readable policy changes which offer is cheaper.
 
-**Status:** v0.2 — corpus-validated design · **Namespace:** `io.github.yairsabag.policy.cancellation` (will change if standardized as a shared extension)
+**Status:** v0.2.1 — corpus-validated independent extension · **Compatibility:** [UCP v2026-08-25](https://github.com/Universal-Commerce-Protocol/ucp/releases/tag/v2026-08-25) · **Namespace:** `io.github.yairsabag.policy.cancellation`
+
+**Standardization status:** the base `policies[]` primitive is part of stable UCP; this cancellation type is an independent, vendor-namespaced extension and is **not** an adopted UCP shared policy type.
 
 A machine-readable **cancellation and disruption policy** for [UCP](https://github.com/Universal-Commerce-Protocol/ucp)'s `policies[]` container — covering the class of merchant policies standard in services and bookings commerce:
 
@@ -11,7 +16,13 @@ A machine-readable **cancellation and disruption policy** for [UCP](https://gith
 
 Cancellation terms influence purchasing decisions before payment, yet today they are typically published only as human-readable text. Purchasing agents can compare price and shipping but cannot weigh that one hotel offer is fully refundable until check-in and another is not.
 
-Origin: the design discussion in [Universal-Commerce-Protocol/ucp#572](https://github.com/Universal-Commerce-Protocol/ucp/pull/572). Related: Return Extension ([#257](https://github.com/Universal-Commerce-Protocol/ucp/pull/257)) for physical goods; Services Vertical ([#303](https://github.com/Universal-Commerce-Protocol/ucp/issues/303)).
+The base primitive is now shipped in the stable [UCP v2026-08-25 release](https://github.com/Universal-Commerce-Protocol/ucp/releases/tag/v2026-08-25), whose release notes explicitly list [`policies[]` (#572)](https://github.com/Universal-Commerce-Protocol/ucp/pull/572). This extension grew from the [tiered, anchor-relative cancellation proposal](https://github.com/Universal-Commerce-Protocol/ucp/pull/572#issuecomment-4925373430); UCP maintainer Ilya Grigorik described the use case as a ["textbook" extension over the primitive](https://github.com/Universal-Commerce-Protocol/ucp/pull/572#issuecomment-4930352387).
+
+See [docs/PROVENANCE.md](docs/PROVENANCE.md) for the timestamped design and validation history and the precise boundary between stable UCP and this independent extension. Related: Return Extension ([#634](https://github.com/Universal-Commerce-Protocol/ucp/pull/634)) for physical goods; Services Vertical ([#303](https://github.com/Universal-Commerce-Protocol/ucp/issues/303)).
+
+## What changed in v0.2.1
+
+v0.2.1 pins the integration contract to the first stable UCP release containing `policies[]`, makes the standardization boundary explicit, and validates complete policy entries against the UCP base envelope plus the cancellation fields. The cancellation model itself is unchanged from v0.2.
 
 ## What changed in v0.2
 
@@ -53,7 +64,7 @@ Key semantics:
 - **`payout`** *(optional)* — how value is delivered: original rails (default) or `credit` with a `multiplier_bps` ("credit worth 120%").
 - Platforms that negotiated the extension reason over `rules`; others can still render `description`.
 
-Schema: [`schema/policy.cancellation.schema.json`](schema/policy.cancellation.schema.json) — all five [`examples/`](examples/) validate against it (event tiers, hotel one-night penalty, salon flat fee, cooling-off window, credit payout).
+Schema: [`schema/policy.cancellation.schema.json`](schema/policy.cancellation.schema.json) — the policy entry in each of the five [`examples/`](examples/) validates against it (event tiers, hotel one-night penalty, salon flat fee, cooling-off window, credit payout).
 
 ## Deliberately out of scope (documented backlog)
 
