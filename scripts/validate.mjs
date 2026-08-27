@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
-const root = new URL("..", import.meta.url);
-const schema = JSON.parse(fs.readFileSync(new URL("schema/policy.cancellation.schema.json", root), "utf8"));
+const root = fileURLToPath(new URL("..", import.meta.url));
+const schema = JSON.parse(fs.readFileSync(path.join(root, "schema/policy.cancellation.schema.json"), "utf8"));
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
@@ -17,7 +18,7 @@ function jsonFiles(directory) {
 }
 
 let checked = 0;
-for (const filename of jsonFiles(new URL("examples", root))) {
+for (const filename of jsonFiles(path.join(root, "examples"))) {
   const document = JSON.parse(fs.readFileSync(filename, "utf8"));
   for (const policy of document.policies ?? []) {
     if (policy.type !== "io.github.yairsabag.policy.cancellation") continue;
