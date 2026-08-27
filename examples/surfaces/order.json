@@ -1,0 +1,37 @@
+{
+  "_comment": "Policy-placement fixture for the UCP order surface; this is intentionally not a complete response document.",
+  "surface": "order",
+  "policies": [
+    {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": {
+        "plain": "Free cancellation until 48 hours before the service; 50% thereafter."
+      },
+      "applies_to": [
+        "$.line_items[0]"
+      ],
+      "anchor": "2026-11-15T15:00:00Z",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            {
+              "until": "PT48H",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 10000
+              }
+            }
+          ],
+          "after_last_tier": {
+            "kind": "percentage",
+            "buyer_bps": 5000
+          }
+        },
+        "seller_cancel": {
+          "kind": "percentage",
+          "buyer_bps": 10000
+        }
+      }
+    }
+  ]
+}
