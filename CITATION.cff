@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this schema or its corpus methodology, please cite this repository."
 title: "policy.cancellation — UCP extension for service-side cancellation policies"
-version: "0.2.1"
-date-released: "2026-08-26"
+version: "0.3.0"
+date-released: "2026-08-27"
 authors:
   - family-names: "Sabag"
     given-names: "Yair"
-abstract: "A corpus-validated, machine-readable cancellation and disruption policy extension for UCP policies[], covering anchor-relative tiers, multiple triggers, and percentage, fixed-fee, and unit-deduction outcomes."
+abstract: "A corpus-validated, machine-readable cancellation and disruption third-party policy type for UCP policies[], covering anchor-relative tiers, multiple triggers, and percentage, fixed-fee, and unit-deduction outcomes."
 keywords:
   - "Universal Commerce Protocol"
   - "UCP"
