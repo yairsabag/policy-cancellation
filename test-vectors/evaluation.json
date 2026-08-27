@@ -1,0 +1,150 @@
+{
+  "version": "0.3.0",
+  "policies": {
+    "event": {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": {
+        "plain": "100% until 7 days; 70% until 72 hours; 30% until 24 hours; none later."
+      },
+      "anchor": "2026-08-20T15:00:00Z",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            {
+              "until": "P7D",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 10000
+              }
+            },
+            {
+              "until": "PT72H",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 7000
+              }
+            },
+            {
+              "until": "PT24H",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 3000
+              }
+            }
+          ],
+          "after_last_tier": {
+            "kind": "percentage",
+            "buyer_bps": 0
+          }
+        }
+      }
+    },
+    "hotel": {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": {
+        "plain": "Free until 48 hours; later cancellations and no-shows cost one night."
+      },
+      "anchor": "2026-11-15T15:00:00+02:00",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            {
+              "until": "PT48H",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 10000
+              }
+            }
+          ],
+          "after_last_tier": {
+            "kind": "unit_deduction",
+            "seller_keeps": {
+              "quantity": 1,
+              "unit": "night"
+            }
+          }
+        }
+      }
+    },
+    "cooling_off": {
+      "type": "io.github.yairsabag.policy.cancellation",
+      "description": {
+        "plain": "Full refund within 14 days of booking."
+      },
+      "anchor": "2026-12-24T15:00:00+02:00",
+      "rules": {
+        "buyer_cancel": {
+          "tiers": [
+            {
+              "until": "P14D",
+              "relative_to": "purchase",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 10000
+              }
+            },
+            {
+              "until": "P7D",
+              "relative_to": "anchor",
+              "outcome": {
+                "kind": "percentage",
+                "buyer_bps": 5000
+              }
+            }
+          ],
+          "after_last_tier": {
+            "kind": "percentage",
+            "buyer_bps": 0
+          }
+        }
+      }
+    }
+  },
+  "vectors": [
+    {
+      "name": "full refund before seven-day deadline",
+      "policy": "event",
+      "at": "2026-08-10T12:00:00Z",
+      "expected_buyer_bps": 10000
+    },
+    {
+      "name": "seventy percent inside seven-day window",
+      "policy": "event",
+      "at": "2026-08-15T12:00:00Z",
+      "expected_buyer_bps": 7000
+    },
+    {
+      "name": "thirty percent inside seventy-two-hour window",
+      "policy": "event",
+      "at": "2026-08-18T12:00:00Z",
+      "expected_buyer_bps": 3000
+    },
+    {
+      "name": "zero after final deadline",
+      "policy": "event",
+      "at": "2026-08-20T12:00:00Z",
+      "expected_buyer_bps": 0
+    },
+    {
+      "name": "seller cancellation defaults to full refund",
+      "policy": "event",
+      "trigger": "seller_cancel",
+      "at": "2026-08-18T12:00:00Z",
+      "expected_buyer_bps": 10000
+    },
+    {
+      "name": "no-show inherits final buyer outcome",
+      "policy": "hotel",
+      "trigger": "no_show",
+      "at": "2026-11-15T15:00:00+02:00",
+      "expected_kind": "unit_deduction"
+    },
+    {
+      "name": "purchase-relative cooling-off tier",
+      "policy": "cooling_off",
+      "purchased_at": "2026-11-01T10:00:00Z",
+      "at": "2026-11-10T10:00:00Z",
+      "expected_buyer_bps": 10000
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "policy-cancellation",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Reference schema and evaluator for the io.github.yairsabag.policy.cancellation UCP policy type",
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

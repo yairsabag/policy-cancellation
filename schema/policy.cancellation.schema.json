@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/yairsabag/policy-cancellation/schema/policy.cancellation.schema.json",
+  "$id": "https://yairsabag.github.io/policy-cancellation/schema/policy.cancellation.schema.json",
   "title": "io.github.yairsabag.policy.cancellation",
-  "description": "Independent cancellation and disruption policy extension for the policies[] primitive shipped in UCP v2026-08-25. Validates the UCP policy envelope plus the v0.2 cancellation fields.",
+  "description": "Independent third-party cancellation policy type for the policies[] primitive shipped in UCP v2026-08-25. Validates the UCP policy envelope plus the v0.3 cancellation fields.",
   "allOf": [
     {
       "$ref": "#/$defs/ucp_policy_v2026_08_25"
@@ -14,7 +14,7 @@
   "$defs": {
     "ucp_policy_v2026_08_25": {
       "title": "UCP Policy base contract (v2026-08-25)",
-      "description": "Self-contained copy of the policies[] item fields needed for offline validation. Source: UCP v2026-08-25 common/types/policy.json.",
+      "description": "Self-contained copy of the policies[] item fields needed for offline validation. Source: UCP v2026-08-25 shopping/types/policy.json.",
       "type": "object",
       "required": [
         "type",
@@ -45,6 +45,7 @@
       "title": "UCP Description",
       "type": "object",
       "minProperties": 1,
+      "additionalProperties": true,
       "properties": {
         "plain": {
           "type": "string"
@@ -65,6 +66,7 @@
         "anchor",
         "rules"
       ],
+      "additionalProperties": true,
       "properties": {
         "type": {
           "const": "io.github.yairsabag.policy.cancellation"
@@ -76,22 +78,22 @@
         },
         "rules": {
           "type": "object",
-          "additionalProperties": false,
           "minProperties": 1,
-          "description": "Outcomes keyed by trigger. buyer_cancel is a schedule; the others are single outcomes. Absent no_show defaults to buyer_cancel's after_last_tier outcome. Absent seller_cancel defaults to full refund.",
+          "additionalProperties": true,
+          "description": "Outcomes keyed by trigger. Known triggers are buyer_cancel, no_show, seller_cancel and seller_postpone. Readers MUST tolerate unknown triggers.",
           "properties": {
             "buyer_cancel": {
               "type": "object",
               "required": [
                 "tiers"
               ],
-              "additionalProperties": false,
+              "additionalProperties": true,
               "properties": {
                 "tiers": {
                   "type": "array",
                   "minItems": 1,
                   "maxItems": 8,
-                  "description": "Ordered farthest-to-nearest to the reference point. Semantic constraints (not expressible in JSON Schema): deadlines strictly decreasing in proximity; buyer entitlement non-increasing over time.",
+                  "description": "Ordered by the time at which each tier stops applying. Semantic ordering and entitlement monotonicity are checked by the reference validator.",
                   "items": {
                     "$ref": "#/$defs/tier"
                   }
@@ -118,15 +120,16 @@
           "required": [
             "method"
           ],
-          "additionalProperties": false,
-          "description": "Optional. How buyer value is delivered. Absent = original payment rails at 1.0x.",
+          "additionalProperties": true,
+          "description": "Optional. How buyer value is delivered. Absent means original payment rails at 1.0x. Readers MUST tolerate unknown methods.",
           "properties": {
             "method": {
               "type": "string",
-              "enum": [
+              "examples": [
                 "original",
                 "credit"
-              ]
+              ],
+              "description": "Well-known values are original and credit. Unknown values MUST be tolerated."
             },
             "multiplier_bps": {
               "type": "integer",
@@ -143,106 +146,138 @@
         "until",
         "outcome"
       ],
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "until": {
           "type": "string",
           "pattern": "^P(?!$)(\\d+D)?(T(\\d+H)?(\\d+M)?(\\d+S)?)?$",
-          "description": "ISO 8601 duration. Calendar-based; business-day counting is not supported (documented limitation)."
+          "description": "ISO 8601 duration using days and time units. Business-day counting is not supported."
         },
         "relative_to": {
           "type": "string",
-          "enum": [
+          "examples": [
             "anchor",
             "purchase"
           ],
           "default": "anchor",
-          "description": "anchor: duration BEFORE the anchor until which this tier applies. purchase: duration AFTER purchase during which this tier applies (cooling-off windows)."
+          "description": "Well-known values: anchor means the duration before the anchor; purchase means the duration after purchase. Unknown values MUST be tolerated by readers and MUST NOT be evaluated without defined semantics."
         },
         "outcome": {
           "$ref": "#/$defs/outcome"
         }
       }
     },
+    "seller_keeps": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "amount": {
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d{1,2})?$"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit": {
+          "type": "string"
+        }
+      }
+    },
     "outcome": {
-      "description": "Discriminated union. Direction is baked into each kind's field name (invalid states unrepresentable): percentage is buyer-side; fixed_fee and unit_deduction are seller-side, matching how each kind is stated in real policies.",
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "kind",
-            "buyer_bps"
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": true,
+      "description": "Open discriminated outcome. Known kinds are percentage, fixed_fee and unit_deduction. Readers MUST tolerate unknown kinds and preserve their fields.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "examples": [
+            "percentage",
+            "fixed_fee",
+            "unit_deduction"
           ],
-          "additionalProperties": false,
-          "properties": {
-            "kind": {
-              "const": "percentage"
+          "description": "Open discriminator. Unknown values MUST be tolerated."
+        },
+        "buyer_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "seller_keeps": {
+          "$ref": "#/$defs/seller_keeps"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "percentage"
+              }
             },
-            "buyer_bps": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000
-            }
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "buyer_bps"
+            ]
           }
         },
         {
-          "type": "object",
-          "required": [
-            "kind",
-            "seller_keeps"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "kind": {
-              "const": "fixed_fee"
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "fixed_fee"
+              }
             },
-            "seller_keeps": {
-              "type": "object",
-              "required": [
-                "amount",
-                "currency"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "amount": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d{1,2})?$"
-                },
-                "currency": {
-                  "type": "string",
-                  "pattern": "^[A-Z]{3}$"
-                }
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "seller_keeps"
+            ],
+            "properties": {
+              "seller_keeps": {
+                "required": [
+                  "amount",
+                  "currency"
+                ]
               }
             }
           }
         },
         {
-          "type": "object",
-          "required": [
-            "kind",
-            "seller_keeps"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "kind": {
-              "const": "unit_deduction"
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "unit_deduction"
+              }
             },
-            "seller_keeps": {
-              "type": "object",
-              "required": [
-                "quantity",
-                "unit"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "quantity": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "unit": {
-                  "type": "string",
-                  "description": "Free-form in v0.2 (e.g. 'night', 'session'). Registry is backlog."
-                }
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "seller_keeps"
+            ],
+            "properties": {
+              "seller_keeps": {
+                "required": [
+                  "quantity",
+                  "unit"
+                ]
               }
             }
           }
